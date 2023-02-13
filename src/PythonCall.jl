@@ -15,6 +15,7 @@ include("Py.jl")
 include("err.jl")
 include("config.jl")
 include("convert.jl")
+include("convert2.jl")
 # abstract interfaces
 include("abstract/object.jl")
 include("abstract/iter.jl")
