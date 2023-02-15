@@ -34,6 +34,48 @@ export pyint
 
 pyisint(x) = pytypecheckfast(x, C.Py_TPFLAGS_LONG_SUBCLASS)
 
+function pyint_asinteger(::Type{T}, x::Py) where {T<:Integer}
+    # first try to convert to Clonglong (or Culonglong if unsigned)
+    v = T <: Unsigned ? C.PyLong_AsUnsignedLongLong(getptr(x)) : C.PyLong_AsLongLong(getptr(x))
+    if !iserrset_ambig(v)
+        # success
+        return convert(T, v)::T
+    elseif errmatches(pybuiltins.OverflowError)
+        # overflows Clonglong or Culonglong
+        if T in (
+               Bool,
+               Int8,
+               Int16,
+               Int32,
+               Int64,
+               Int128,
+               UInt8,
+               UInt16,
+               UInt32,
+               UInt64,
+               UInt128,
+           ) &&
+           typemin(typeof(v)) ≤ typemin(T) &&
+           typemax(T) ≤ typemax(typeof(v))
+            # definitely overflows S, give up now
+            pythrow()
+        else
+            errclear()
+            # try converting -> int -> str -> BigInt -> T
+            x_int = pyint(x)
+            x_str = pystr(String, x_int)
+            pydel!(x_int)
+            v2 = parse(BigInt, x_str)
+            return convert(T, v2)::T
+        end
+    else
+        # other error
+        pythrow()
+    end
+end
+
+pyint_asinteger(x::Py) = pyint_asinteger(Integer, x)
+
 pyconvert_rule_int(::Type{T}, x::Py) where {T<:Number} = begin
     # first try to convert to Clonglong (or Culonglong if unsigned)
     v = T <: Unsigned ? C.PyLong_AsUnsignedLongLong(getptr(x)) : C.PyLong_AsLongLong(getptr(x))
