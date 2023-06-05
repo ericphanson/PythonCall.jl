@@ -261,6 +261,7 @@ end
 
 @testitem "datetime" begin
     using Dates
+    using PythonCall: pydate
     dt = pyimport("datetime")
     x1 = pydate(2001, 2, 3)
     @test pyisinstance(x1, dt.date)

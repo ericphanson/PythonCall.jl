@@ -51,7 +51,7 @@ end
     @test x1 === 34
     x2 = pyconvert(UInt8, 7)
     @test x2 === 0x07
-    x3 = pyconvert(UInt32, typemax(UInt32))
+    x3 = pyconvert(Int32, typemax(UInt32))
     @test x3 === typemax(UInt32)
     x4 = pyconvert(Integer, big(3)^1000)
     @test x4 isa BigInt
