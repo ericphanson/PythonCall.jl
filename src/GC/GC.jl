@@ -12,6 +12,10 @@ using ..C: C
 const ENABLED = Ref(true)
 const QUEUE = C.PyPtr[]
 
+# This is used for basic profiling
+const SECONDS_SPENT_IN_GC = Threads.Atomic{Float64}()
+
+
 """
     PythonCall.GC.disable()
 
@@ -55,9 +59,10 @@ end
 function enqueue(ptr::C.PyPtr)
     if ptr != C.PyNULL && C.CTX.is_initialized
         if ENABLED[]
-            C.with_gil(false) do
+            t = @elapsed C.with_gil(false) do
                 C.Py_DecRef(ptr)
             end
+            Threads.atomic_add!(SECONDS_SPENT_IN_GC, t)
         else
             push!(QUEUE, ptr)
         end
@@ -68,13 +73,14 @@ end
 function enqueue_all(ptrs)
     if C.CTX.is_initialized
         if ENABLED[]
-            C.with_gil(false) do
+            t = @elapsed C.with_gil(false) do
                 for ptr in ptrs
                     if ptr != C.PyNULL
                         C.Py_DecRef(ptr)
                     end
                 end
             end
+            Threads.atomic_add!(SECONDS_SPENT_IN_GC, t)
         else
             append!(QUEUE, ptrs)
         end
